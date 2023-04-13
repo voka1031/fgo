@@ -72,6 +72,9 @@ var AllCategoryNUM = {
 	"newyear_23_up": [7,6,3,4,4,5,3,4,6,3],
 	"newyear_23_down": [3,5,3,6,6,6,6,6,5,5],
 }
+
+var CategoryNUM = [];
+
 /* 版型
 var foo =
 {saber:[],
@@ -187,13 +190,14 @@ var Marks = [
 document.oncontextmenu = function(){return false};
 
 //角色物件
-var Unit = function(imageUrl){
+var Unit = function(no) {
 	var self = this;
-	this.imageUrl = imageUrl;
+	this.imageUrl = "images/servents/" + no + ".png";
 	this.npLv = 0;
 	this.mark = 0;
 	this.image = new Image();
 	this.image.src = this.imageUrl;
+	this.no = no;
 };
 
 var CategoryLen = Category.length;
@@ -219,7 +223,7 @@ var svt = [];
 for (i = 0; i < CategoryLen; i++) {
 	for (j = 0; j < servents[Category[i]].length; j++) {
 		no = servents[Category[i]][j];
-		svt[no] = new Unit("images/servents/" + no + ".png");
+		svt[no] = new Unit(no);
 	}
 }
 
@@ -227,64 +231,36 @@ function getNo(category,i,j){
 	return category[Category[i]][j];
 }
 
-function getUnit(country){
-	for (i=0; i<CategoryLen ; i++){
+let unitMap = new Map([
+  // 五星自選(含故事限)
+  ["z", { content: AllCategoryNUM, contentRow: z }],
+  // 六周年
+  ["sixth", { content: AllCategoryNUM, contentRow: sixth }],
+  // 七周年
+  ["seventh_up", { content: AllCategoryNUM, contentRow: seventh_up }],
+  ["seventh_down", { content: AllCategoryNUM, contentRow: seventh_down }],
+  // 22'新年
+  ["newyear_22", { content: AllCategoryNUM, contentRow: newyear_22 }],
+  ["newyear_23_up", { content: AllCategoryNUM, contentRow: newyear_23_up }],
+  ["newyear_23_down", { content: AllCategoryNUM, contentRow: newyear_23_down }],
+]);
+
+function getUnit(country) {
+	for (i=0; i<CategoryLen ; i++) {
 		units[i] = [];
 		if(country == 'jp' || country == 'tw'){
 			for (j = 0; j < servents[Category[i]].length; j++) {
-				no = getNo(servents,i,j);
-				units[i][j] = svt[no];
+				units[i][j] = svt[getNo(servents,i,j)];
 			}
-		}
-		// 五星自選(含故事限)
-		else if(country == 'z'){
-			for(j = 0; j< AllCategoryNUM[country][i]; j++){
-				no = getNo(z,i,j);
-				units[i][j] = svt[no];
-			}
-		}
-		// 六周年
-		else if(country == 'sixth'){
-			for(j = 0; j< AllCategoryNUM[country][i]; j++){
-				no = getNo(sixth,i,j);
-				units[i][j] = svt[no];
-			}
-		}
-		// 七周年
-		else if(country == 'seventh_up'){
-			for(j = 0; j< AllCategoryNUM[country][i]; j++){
-				no = getNo(seventh_up,i,j);
-				units[i][j] = svt[no];
-			}
-		}
-		else if(country == 'seventh_down'){
-			for(j = 0; j< AllCategoryNUM[country][i]; j++){
-				no = getNo(seventh_down,i,j);
-				units[i][j] = svt[no];
-			}
-		}
-		// 22'新年
-		else if(country == 'newyear_22'){
-			for(j = 0; j< AllCategoryNUM[country][i]; j++){
-				no = getNo(newyear_22,i,j);
-				units[i][j] = svt[no];
-			}
-		}
-		else if(country == 'newyear_23_up'){
-			for(j = 0; j< AllCategoryNUM[country][i]; j++){
-				no = getNo(newyear_23_up,i,j);
-				units[i][j] = svt[no];
-			}
-		}
-		else if(country == 'newyear_23_down'){
-			for(j = 0; j< AllCategoryNUM[country][i]; j++){
-				no = getNo(newyear_23_down,i,j);
-				units[i][j] = svt[no];
+		} else {
+			let selectedContent = unitMap.get(country)["content"];
+			let selectedContentRow = unitMap.get(country)["contentRow"];
+			for (j = 0; j < selectedContent[country][i]; j++) {
+				units[i][j] = svt[getNo(selectedContentRow, i, j)];
 			}
 		}
 	}
 
-	addUnitsNo(units);
 	return units;
 }
 
@@ -787,17 +763,20 @@ function getAttribute(x){
 	return Math.floor((x - marginLeft) / (CELL_SIZE + col_padding));
 }
 
+function isOutPrint(point, attribute, category) {
+	return point.x - (attribute * (CELL_SIZE + col_padding) + marginLeft) < CELL_SIZE &&
+	point.x - (attribute * (CELL_SIZE + col_padding) + marginLeft) > 0 &&
+	point.y - (category * (CELL_SIZE + row_padding) + marginTop) < CELL_SIZE &&
+	point.y - (category * (CELL_SIZE + row_padding) + marginTop) > 0 &&
+	attribute != 0 &&
+	attribute <= CategoryNUM[category];
+}
+
 function rightClick(event){
-	var rect = event.target.getBoundingClientRect();
 	var point = getCoordinates(event);
 	var attribute = getAttribute(point.x);
 	var category = getCategory(point.y);
-	if(point.x - (attribute * (CELL_SIZE + col_padding) + marginLeft) < CELL_SIZE &&
-		point.x - (attribute * (CELL_SIZE + col_padding) + marginLeft) > 0 &&
-		point.y - (category * (CELL_SIZE + row_padding) + marginTop) < CELL_SIZE &&
-		point.y - (category * (CELL_SIZE + row_padding) + marginTop) > 0 &&
-		attribute != 0 &&
-		attribute <= CategoryNUM[category]){
+	if(isOutPrint(point, attribute, category)){
 		switch(mode) {
 			case 0:
 				if(units[category][attribute - 1].npLv){
@@ -848,18 +827,10 @@ function rightClick(event){
 }
 
 function onCanvasClick(event){
-
-	var rect = event.target.getBoundingClientRect();
 	var point = getCoordinates(event);
 	var attribute = getAttribute(point.x);
 	var category = getCategory(point.y);
-
-	if(point.x - (attribute * (CELL_SIZE + col_padding) + marginLeft) < CELL_SIZE &&
-		point.x - (attribute * (CELL_SIZE + col_padding) + marginLeft) > 0 &&
-		point.y - (category * (CELL_SIZE + row_padding) + marginTop) < CELL_SIZE &&
-		point.y - (category * (CELL_SIZE + row_padding) + marginTop) > 0 &&
-		attribute != 0 &&
-		attribute <= CategoryNUM[category]){
+	if(isOutPrint(point, attribute, category)){
 		switch(mode) {
 			case 0:
 				if(!units[category][attribute - 1].npLv){

@@ -80,11 +80,3 @@ function updateUnitsNPLevel(units) {
     }
   }
 }
-
-function addUnitsNo(units) {
-  for (let i = 0; i < units.length; i++) {
-    for (let j = 0; j < units[i].length; j++) {
-      units[i][j].no = units[i][j].imageUrl.split("/").pop().split(".")[0];
-    }
-  }
-}
